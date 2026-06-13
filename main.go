@@ -48,10 +48,11 @@ func run() error {
 		return nil
 	}
 	debug.Log("event: tool=%s name=%s cwd=%s", evt.Tool, evt.HookEventName, evt.CWD)
-	// 3.5 Tool override from config
+	// 3.5 Tool label override from config (display only; does not affect logic)
+	displayTool := string(evt.Tool)
 	if cfg.Tool != "" {
-		evt.Tool = event.Tool(cfg.Tool)
-		debug.Log("tool overridden by config: %s", cfg.Tool)
+		displayTool = cfg.Tool
+		debug.Log("tool label overridden by config: %s", cfg.Tool)
 	}
 
 	// 3. Event filter
@@ -110,7 +111,10 @@ func run() error {
 	sessionID := evt.SessionID
 	prev := checkpoint.Load(sessionID)
 	now := formatNow(cfg.TZOffset)
-	toolStr := string(evt.Tool)
+	toolStr := displayTool
+	if toolStr == "" {
+		toolStr = string(evt.Tool)
+	}
 
 	var cardData *card.Card
 
