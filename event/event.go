@@ -17,16 +17,19 @@ const (
 
 // Event represents a normalized hook event from any supported tool.
 type Event struct {
-	Tool            Tool   // detected tool
-	HookEventName   string // original event name
-	CWD             string
-	SessionID       string // Claude Code: session_id; Codex: task_id
-	TranscriptPath  string // Claude Code only
+	Tool                Tool   // detected tool
+	HookEventName       string // original event name
+	CWD                 string
+	SessionID           string // Claude Code: session_id; Codex: task_id
+	TranscriptPath      string // Claude Code only
 	LastAssistantMessage string
-	Message         string
-	Title           string
-	NotificationType string
+	Message             string
+	Title               string
+	NotificationType    string
 }
+
+// DebugLogFn is injected by the debug package to log raw stdin when enabled.
+var DebugLogFn func(string, ...interface{})
 
 // ReadStdin reads and auto-detects a hook event from stdin.
 // Returns nil,nil when there's no input (tty or empty pipe).
@@ -39,15 +42,21 @@ func ReadStdin() (*Event, error) {
 		return nil, nil
 	}
 
+	if DebugLogFn != nil {
+		DebugLogFn("raw stdin (%d bytes): %s", len(data), string(data))
+	}
+
 	// Peek raw JSON to detect tool by unique fields before trying parsers.
-	// Codex hooks carry "task_id" which Claude Code hooks do not.
+	// Codex hooks carry "event" and/or "task_id" which Claude Code hooks do not.
 	// When Codex also sends "hook_event_name", parseClaude would wrongly
 	// match first — pre-detect to avoid that.
 	var raw map[string]interface{}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, err
 	}
-	if _, hasTaskID := raw["task_id"]; hasTaskID {
+	_, hasEvent := raw["event"]
+	_, hasTaskID := raw["task_id"]
+	if hasEvent || hasTaskID {
 		if evt, ok := parseCodex(data); ok {
 			return evt, nil
 		}
@@ -58,7 +67,7 @@ func ReadStdin() (*Event, error) {
 		return evt, nil
 	}
 
-	// Try Codex format (second pass for Codex payloads without task_id)
+	// Try Codex format (second pass for edge cases)
 	if evt, ok := parseCodex(data); ok {
 		return evt, nil
 	}
@@ -90,29 +99,28 @@ func parseClaude(data []byte) (*Event, bool) {
 		return nil, false
 	}
 	return &Event{
-		Tool:                ToolClaudeCode,
-		HookEventName:       raw.HookEventName,
-		CWD:                 raw.CWD,
-		SessionID:           raw.SessionID,
-		TranscriptPath:      raw.TranscriptPath,
+		Tool:                 ToolClaudeCode,
+		HookEventName:        raw.HookEventName,
+		CWD:                  raw.CWD,
+		SessionID:            raw.SessionID,
+		TranscriptPath:       raw.TranscriptPath,
 		LastAssistantMessage: raw.LastAssistantMessage,
-		Message:             raw.Message,
-		Title:               raw.Title,
-		NotificationType:    raw.NotificationType,
+		Message:              raw.Message,
+		Title:                raw.Title,
+		NotificationType:     raw.NotificationType,
 	}, true
 }
 
 // ------ Codex parser ------
 
 // codexRaw mirrors the Codex CLI hook JSON from stdin.
-// Fields are based on Codex hook documentation.
 type codexRaw struct {
-	Event     string `json:"event"`      // "stop", "notification", "request"
-	TaskID    string `json:"task_id"`    // maps to SessionID
-	CWD       string `json:"cwd"`
-	Message   string `json:"message"`
-	Title     string `json:"title"`
-	Type      string `json:"type"`       // notification type
+	Event       string `json:"event"`    // "stop", "notification", "request"
+	TaskID      string `json:"task_id"`  // maps to SessionID
+	CWD         string `json:"cwd"`
+	Message     string `json:"message"`
+	Title       string `json:"title"`
+	Type        string `json:"type"`     // notification type
 	LastMessage string `json:"last_message"`
 }
 
@@ -127,14 +135,14 @@ func parseCodex(data []byte) (*Event, bool) {
 	// Map Codex event names to Claude Code equivalents
 	eventName := mapCodexEvent(raw.Event)
 	return &Event{
-		Tool:                ToolCodex,
-		HookEventName:       eventName,
-		CWD:                 raw.CWD,
-		SessionID:           raw.TaskID,
+		Tool:                 ToolCodex,
+		HookEventName:        eventName,
+		CWD:                  raw.CWD,
+		SessionID:            raw.TaskID,
 		LastAssistantMessage: raw.LastMessage,
-		Message:             raw.Message,
-		Title:               raw.Title,
-		NotificationType:    raw.Type,
+		Message:              raw.Message,
+		Title:                raw.Title,
+		NotificationType:     raw.Type,
 	}, true
 }
 

@@ -27,6 +27,7 @@ func main() {
 
 func run() error {
 	debug.Log("=== hook2feishu start ===")
+	event.DebugLogFn = debug.Log
 
 	// 1. Load config
 	cfg, err := config.Load()
@@ -78,7 +79,7 @@ func run() error {
 		}
 	}
 
-	// 5. Parse transcript (Claude Code only — Codex doesn't have transcript)
+	// 5. Parse transcript (Claude Code only 鈥?Codex doesn't have transcript)
 	var stats *transcript.Stats
 	if evt.Tool == event.ToolClaudeCode && evt.TranscriptPath != "" {
 		stats = transcript.Parse(evt.TranscriptPath)
@@ -221,7 +222,7 @@ func run() error {
 	return nil
 }
 
-// ── Helpers ──────────────────────────────────────────────────────
+// 鈹€鈹€ Helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 func contains(slice []string, item string) bool {
 	for _, s := range slice {

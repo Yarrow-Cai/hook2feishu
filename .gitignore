@@ -1,7 +1,7 @@
 # Binary
 /claude2feishu
+/claude2feishu.exe
 /hook2feishu.exe
-/claude2feishu_darwin*
 /claude2feishu_linux*
 
 # Release dist
