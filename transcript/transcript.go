@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+
+	"github.com/Yarrow-Cai/hook2feishu/event"
 )
 
 // Stats holds statistics parsed from a Claude Code session transcript.
@@ -36,6 +38,9 @@ func Parse(path string) *Stats {
 
 	f, err := os.Open(path)
 	if err != nil {
+		if event.DebugLogFn != nil {
+			event.DebugLogFn("transcript open failed: path=%s err=%v", path, err)
+		}
 		return stats
 	}
 	defer f.Close()

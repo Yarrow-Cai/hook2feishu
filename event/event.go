@@ -129,11 +129,14 @@ func parseCodex(data []byte) (*Event, bool) {
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, false
 	}
-	if raw.Event == "" {
+	if raw.Event == "" && raw.TaskID == "" {
 		return nil, false
 	}
-	// Map Codex event names to Claude Code equivalents
+	// Map Codex event names; default event name when only task_id is present
 	eventName := mapCodexEvent(raw.Event)
+	if eventName == raw.Event && eventName == "" {
+		eventName = "Stop"
+	}
 	return &Event{
 		Tool:                 ToolCodex,
 		HookEventName:        eventName,

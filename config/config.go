@@ -17,6 +17,9 @@ type Config struct {
 	// lark-cli settings (optional)
 	LarkCLIPath    string `json:"lark_cli_path"`
 	LarkCLIProfile string `json:"lark_cli_profile"`
+
+	// Tool overrides auto-detection: "claude", "codex", or empty (auto).
+	Tool string `json:"tool"`
 }
 
 // DefaultConfig returns a Config with sensible defaults.

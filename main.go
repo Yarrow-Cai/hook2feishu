@@ -48,6 +48,11 @@ func run() error {
 		return nil
 	}
 	debug.Log("event: tool=%s name=%s cwd=%s", evt.Tool, evt.HookEventName, evt.CWD)
+	// 3.5 Tool override from config
+	if cfg.Tool != "" {
+		evt.Tool = event.Tool(cfg.Tool)
+		debug.Log("tool overridden by config: %s", cfg.Tool)
+	}
 
 	// 3. Event filter
 	allowed := cfg.Events
@@ -249,20 +254,52 @@ func formatNow(offset int) string {
 	return t.Format("2006-01-02 15:04:05")
 }
 
+func parseTimestamp(ts string) (time.Time, bool) {
+	if t, err := time.Parse(time.RFC3339Nano, ts); err == nil {
+		return t, true
+	}
+	if t, err := time.Parse(time.RFC3339, ts); err == nil {
+		return t, true
+	}
+	if len(ts) >= 19 {
+		if t, err := time.Parse("2006-01-02T15:04:05", ts[:19]); err == nil {
+			return t, true
+		}
+	}
+	return time.Time{}, false
+}
+
 func formatDuration(isoTS string) string {
 	if isoTS == "" {
 		return ""
 	}
-	t, err := time.Parse("2006-01-02T15:04:05", isoTS[:19])
-	if err != nil {
+	t, ok := parseTimestamp(isoTS)
+	if !ok {
 		return ""
 	}
 	elapsed := time.Since(t)
 	if elapsed < 0 {
-		return "0s"
+		return ""
 	}
 	secs := int(elapsed.Seconds())
+	return formatSeconds(secs)
+}
+
+func durationSeconds(isoTS string) int {
+	if isoTS == "" {
+		return 0
+	}
+	t, ok := parseTimestamp(isoTS)
+	if !ok {
+		return 0
+	}
+	return int(time.Since(t).Seconds())
+}
+
+func formatSeconds(secs int) string {
 	switch {
+	case secs <= 0:
+		return fmt.Sprintf("%ds", secs)
 	case secs < 60:
 		return fmt.Sprintf("%ds", secs)
 	case secs < 3600:
@@ -270,17 +307,6 @@ func formatDuration(isoTS string) string {
 	default:
 		return fmt.Sprintf("%dh %dm", secs/3600, (secs%3600)/60)
 	}
-}
-
-func durationSeconds(isoTS string) int {
-	if isoTS == "" {
-		return 0
-	}
-	t, err := time.Parse("2006-01-02T15:04:05", isoTS[:19])
-	if err != nil {
-		return 0
-	}
-	return int(time.Since(t).Seconds())
 }
 
 func projectName(cwd string) string {
