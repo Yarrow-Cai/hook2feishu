@@ -39,25 +39,34 @@ func ReadStdin() (*Event, error) {
 		return nil, nil
 	}
 
+	// Peek raw JSON to detect tool by unique fields before trying parsers.
+	// Codex hooks carry "task_id" which Claude Code hooks do not.
+	// When Codex also sends "hook_event_name", parseClaude would wrongly
+	// match first — pre-detect to avoid that.
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, err
+	}
+	if _, hasTaskID := raw["task_id"]; hasTaskID {
+		if evt, ok := parseCodex(data); ok {
+			return evt, nil
+		}
+	}
+
 	// Try Claude Code format
 	if evt, ok := parseClaude(data); ok {
 		return evt, nil
 	}
 
-	// Try Codex format
+	// Try Codex format (second pass for Codex payloads without task_id)
 	if evt, ok := parseCodex(data); ok {
 		return evt, nil
 	}
 
-	// Best-effort fallback
-	var raw map[string]interface{}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, err
-	}
 	return &Event{Tool: ToolUnknown}, nil
 }
 
-// ── Claude Code parser ───────────────────────────────────────────
+// ------ Claude Code parser ------
 
 // claudeRaw mirrors the Claude Code hook JSON from stdin.
 type claudeRaw struct {
@@ -93,7 +102,7 @@ func parseClaude(data []byte) (*Event, bool) {
 	}, true
 }
 
-// ── Codex parser ─────────────────────────────────────────────────
+// ------ Codex parser ------
 
 // codexRaw mirrors the Codex CLI hook JSON from stdin.
 // Fields are based on Codex hook documentation.
