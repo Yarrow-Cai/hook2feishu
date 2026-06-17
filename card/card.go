@@ -157,7 +157,7 @@ func BuildStopCard(params StopCardParams) *Card {
 	// Last message
 	if params.LastMessage != "" {
 		cleaned := CleanMarkdown(params.LastMessage)
-		snippet := truncate(cleaned, 4000)
+		snippet := truncate(cleaned, 10000)
 		elements = append(elements, markdown(fmt.Sprintf("💬 **回复**\n%s", snippet)))
 		elements = append(elements, hr())
 	}
@@ -245,7 +245,7 @@ func BuildNotificationCard(params NotifCardParams) *Card {
 		elements = append(elements, markdown(fmt.Sprintf("**%s**", params.Title)))
 	}
 	if params.Message != "" {
-		elements = append(elements, markdown(fmt.Sprintf("💬 %s", truncate(CleanMarkdown(params.Message), 4000))))
+		elements = append(elements, markdown(fmt.Sprintf("💬 %s", truncate(CleanMarkdown(params.Message), 10000))))
 	}
 
 	// Branch
