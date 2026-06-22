@@ -228,6 +228,11 @@ func run() error {
 	}
 
 	debug.Log("=== hook2feishu end ===")
+
+	// Output valid JSON to stdout so Claude Code's hook system doesn't
+	// complain about "JSON validation failed" on empty stdout.
+	fmt.Println("{}")
+
 	return nil
 }
 
